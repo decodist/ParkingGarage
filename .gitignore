@@ -1,0 +1,10 @@
+/obj/
+/bin/
+.idea
+appsettings.Development.json
+appsettings.json
+launchSettings.json
+.DS_Store
+Folder.DotSettings.user
+.env
+*.env
