@@ -7,20 +7,34 @@
 <div class="parking-container">
     <div class="parking-header">
         <h1>Parking Building Map</h1>
-        <div class="legend">
-            <span class="legend-item">
-                <div class="spot-indicator available"></div>
-                Available
-            </span>
-            <span class="legend-item">
-                <div class="spot-indicator occupied"></div>
-                Occupied
-            </span>
-            <span class="legend-item">
-                <div class="spot-indicator maintenance"></div>
-                Maintenance
-            </span>
+        
+        <div class="search-container position-relative">
+            <input type="text" id="carSearch" class="form-control" placeholder="Search by plate number" oninput="searchCars(this.value)">
+            <div id="searchResults" class="dropdown-menu"></div>
         </div>
+        
+        <div class="header-controls">
+            <div class="legend">
+                <span class="legend-item">
+                    <div class="spot-indicator available"></div>
+                    Available
+                </span>
+                <span class="legend-item">
+                    <div class="spot-indicator occupied"></div>
+                    Occupied
+                </span>
+                <span class="legend-item">
+                    <div class="spot-indicator maintenance"></div>
+                    Maintenance
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-end mb-3">
+        <button class="btn btn-success btn-sm" onclick="showAddFloorModal()">
+            <i class="fas fa-plus"></i> Add Floor
+        </button>
     </div>
 
     <div class="floors-container" id="floorsContainer">
@@ -41,6 +55,10 @@
                 <h4 id="occupiedSpots">0</h4>
                 <span>Occupied</span>
             </div>
+            <div class="stat-item">
+                <h4 id="maintenanceSpots">0</h4>
+                <span>Maintenance</span>
+            </div>
         </div>
     </div>
 </div>
@@ -58,392 +76,110 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="toggleSpotStatus">Toggle Status</button>
+                <button type="button" class="btn btn-success" id="markAsAvailable" onclick="updateSpotStatus(window.spotId, 'available')">Mark as Available</button>
+                <button type="button" class="btn btn-danger" id="markAsOccupied" onclick="updateSpotStatus(window.spotId, 'occupied')">Mark as Occupied</button>
+                <button type="button" class="btn btn-warning" id="markAsMaintenance" onclick="updateSpotStatus(window.spotId, 'maintenance')">Mark as Maintenance</button>
             </div>
         </div>
     </div>
 </div>
 
-@section Styles {
-    <style>
-    .parking-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    .parking-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-        padding-bottom: 20px;
-        border-bottom: 2px solid #e9ecef;
-    }
-
-    .legend {
-        display: flex;
-        gap: 20px;
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-    }
-
-    .spot-indicator {
-        width: 20px;
-        height: 20px;
-        border-radius: 4px;
-        border: 2px solid #333;
-    }
-
-    .spot-indicator.available {
-        background-color: #28a745;
-    }
-
-    .spot-indicator.occupied {
-        background-color: #dc3545;
-    }
-
-    .spot-indicator.maintenance {
-        background-color: #ffc107;
-    }
-
-    .floors-container {
-        margin-bottom: 30px;
-    }
-
-    .floor {
-        margin-bottom: 40px;
-        border: 2px solid #dee2e6;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    .floor-header {
-        background-color: #343a40;
-        color: white;
-        padding: 15px;
-        font-weight: bold;
-        font-size: 18px;
-    }
-
-    .bays-container {
-        padding: 20px;
-        display: flex;
-        justify-content: space-between;
-        gap: 20px;
-    }
-
-    .bay {
-        flex: 1;
-        border: 1px solid #ced4da;
-        border-radius: 6px;
-        padding: 15px;
-        background-color: #f8f9fa;
-    }
-
-    .bay-header {
-        text-align: center;
-        font-weight: bold;
-        margin-bottom: 15px;
-        color: #495057;
-    }
-
-    .spots-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-    }
-
-    .parking-spot {
-        width: 60px;
-        height: 40px;
-        border: 2px solid #333;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .parking-spot:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    .parking-spot.available {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .parking-spot.occupied {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .parking-spot.maintenance {
-        background-color: #ffc107;
-        color: #333;
-    }
-
-    .parking-info {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-    }
-
-    .stats {
-        display: flex;
-        justify-content: center;
-        gap: 40px;
-    }
-
-    .stat-item {
-        text-align: center;
-    }
-
-    .stat-item h4 {
-        font-size: 2rem;
-        margin: 0;
-        color: #343a40;
-    }
-
-    .stat-item span {
-        color: #6c757d;
-        font-size: 14px;
-    }
-    </style>
-}
-
-@section Scripts {
-    <script>
-    let parkingData = {
-        floors: [],
-        totalSpots: 150,
-        availableSpots: 0,
-        occupiedSpots: 0
-    };
-
-    // Initialize parking building structure
-    function initializeParkingBuilding() {
-        for (let floorNum = 1; floorNum <= 5; floorNum++) {
-            const floor = {
-                id: floorNum,
-                name: `Floor ${floorNum}`,
-                bays: []
-            };
-
-            for (let bayNum = 1; bayNum <= 3; bayNum++) {
-                const bay = {
-                    id: `${floorNum}-${bayNum}`,
-                    name: `Bay ${String.fromCharCode(64 + bayNum)}`,
-                    floorId: floorNum,
-                    spots: []
-                };
-
-                for (let spotNum = 1; spotNum <= 10; spotNum++) {
-                    const spot = {
-                        id: `${floorNum}${bayNum}${spotNum.toString().padStart(2, '0')}`,
-                        number: `${floorNum}${String.fromCharCode(64 + bayNum)}${spotNum.toString().padStart(2, '0')}`,
-                        status: 'available', // available, occupied, maintenance
-                        floorId: floorNum,
-                        bayId: bay.id,
-                        car: null
-                    };
-                    bay.spots.push(spot);
-                }
-                floor.bays.push(bay);
-            }
-            parkingData.floors.push(floor);
-        }
-
-        // Simulate some occupied spots
-        simulateOccupancy();
-        updateStats();
-    }
-
-    function simulateOccupancy() {
-        const allSpots = parkingData.floors.flatMap(f => f.bays.flatMap(b => b.spots));
-        
-        // Randomly occupy 30% of spots
-        const spotsToOccupy = Math.floor(allSpots.length * 0.3);
-        const shuffled = allSpots.sort(() => 0.5 - Math.random());
-        
-        for (let i = 0; i < spotsToOccupy; i++) {
-            shuffled[i].status = 'occupied';
-            shuffled[i].car = {
-                plate: generateRandomPlate(),
-                checkin: new Date(Date.now() - Math.random() * 8 * 60 * 60 * 1000) // Random time in last 8 hours
-            };
-        }
-
-        // Set a few to maintenance
-        for (let i = spotsToOccupy; i < spotsToOccupy + 5; i++) {
-            if (shuffled[i]) {
-                shuffled[i].status = 'maintenance';
-            }
-        }
-    }
-
-    function generateRandomPlate() {
-        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const numbers = '0123456789';
-        let plate = '';
-        for (let i = 0; i < 3; i++) plate += letters.charAt(Math.floor(Math.random() * letters.length));
-        plate += '-';
-        for (let i = 0; i < 4; i++) plate += numbers.charAt(Math.floor(Math.random() * numbers.length));
-        return plate;
-    }
-
-    function renderParkingBuilding() {
-        const container = document.getElementById('floorsContainer');
-        
-        container.innerHTML = parkingData.floors.map(floor => `
-            <div class="floor">
-                <div class="floor-header">
-                    ${floor.name} (${getFloorOccupancy(floor.id)} spots occupied)
-                </div>
-                <div class="bays-container">
-                    ${floor.bays.map(bay => `
-                        <div class="bay">
-                            <div class="bay-header">${bay.name}</div>
-                            <div class="spots-grid">
-                                ${bay.spots.map(spot => `
-                                    <div class="parking-spot ${spot.status}" 
-                                         onclick="showSpotDetails('${spot.id}')"
-                                         title="Spot ${spot.number} - ${spot.status}">
-                                        ${spot.number.slice(-2)}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
+<!-- Add Floor Modal -->
+<div class="modal fade" id="addFloorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Floor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-        `).join('');
-    }
-
-    function getFloorOccupancy(floorId) {
-        const floor = parkingData.floors.find(f => f.id === floorId);
-        return floor.bays.flatMap(b => b.spots).filter(s => s.status === 'occupied' || s.status === 'maintenance').length;
-    }
-
-    function updateStats() {
-        const allSpots = parkingData.floors.flatMap(f => f.bays.flatMap(b => b.spots));
-        const available = allSpots.filter(s => s.status === 'available').length;
-        const occupied = allSpots.filter(s => s.status === 'occupied').length;
-
-        parkingData.availableSpots = available;
-        parkingData.occupiedSpots = occupied;
-
-        document.getElementById('availableSpots').textContent = available;
-        document.getElementById('occupiedSpots').textContent = occupied;
-    }
-
-    function showSpotDetails(spotId) {
-        const spot = findSpotById(spotId);
-        if (!spot) return;
-
-        const modal = new bootstrap.Modal(document.getElementById('spotModal'));
-        document.getElementById('spotModalTitle').textContent = `Spot ${spot.number}`;
-        
-        let bodyContent = `
-            <div class="mb-3">
-                <strong>Status:</strong> <span class="badge bg-${getStatusColor(spot.status)}">${spot.status.toUpperCase()}</span>
-            </div>
-            <div class="mb-3">
-                <strong>Floor:</strong> ${spot.floorId}
-            </div>
-            <div class="mb-3">
-                <strong>Bay:</strong> ${spot.bayId.split('-')[1]}
-            </div>
-        `;
-
-        if (spot.status === 'occupied' && spot.car) {
-            const duration = Math.floor((Date.now() - spot.car.checkin.getTime()) / (1000 * 60));
-            bodyContent += `
+            <div class="modal-body">
                 <div class="mb-3">
-                    <strong>Vehicle:</strong> ${spot.car.plate}
+                    <label for="floorNumber" class="form-label">Floor Number</label>
+                    <input type="number" class="form-control" id="floorNumber" min="1" placeholder="6">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addFloor()">Add Floor</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Bay Modal -->
+<div class="modal fade" id="addBayModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Bay</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="bayFloorId">
+                <div class="mb-3">
+                    <label for="bayName" class="form-label">Bay Name</label>
+                    <input type="text" class="form-control" id="bayName" placeholder="e.g., Bay D">
                 </div>
                 <div class="mb-3">
-                    <strong>Checked In:</strong> ${spot.car.checkin.toLocaleString()}
+                    <label for="bayLocation" class="form-label">Bay Location</label>
+                    <input type="text" class="form-control" id="bayLocation" placeholder="North Wing">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addBay()">Add Bay</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Spot Modal -->
+<div class="modal fade" id="addSpotModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Spot</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="spotBayId">
+                <input type="hidden" id="spotFloorId">
+                <div class="mb-3">
+                    <label for="spotName" class="form-label">Spot Name</label>
+                    <input type="text" class="form-control" id="spotName" placeholder="e.g., 1A01">
                 </div>
                 <div class="mb-3">
-                    <strong>Duration:</strong> ${Math.floor(duration / 60)}h ${duration % 60}m
+                    <label for="spotStatus" class="form-label">Initial Status</label>
+                    <select class="form-control" id="spotStatus">
+                        <option value="available">Available</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
                 </div>
-            `;
-        }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addSpot()">Add Spot</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-        document.getElementById('spotModalBody').innerHTML = bodyContent;
-        
-        // Set up toggle button
-        const toggleBtn = document.getElementById('toggleSpotStatus');
-        toggleBtn.onclick = () => toggleSpotStatus(spotId);
-        
-        modal.show();
-    }
-
-    function findSpotById(spotId) {
-        for (const floor of parkingData.floors) {
-            for (const bay of floor.bays) {
-                const spot = bay.spots.find(s => s.id === spotId);
-                if (spot) return spot;
-            }
-        }
-        return null;
-    }
-
-    function getStatusColor(status) {
-        switch (status) {
-            case 'available': return 'success';
-            case 'occupied': return 'danger';
-            case 'maintenance': return 'warning';
-            default: return 'secondary';
-        }
-    }
-
-    function toggleSpotStatus(spotId) {
-        const spot = findSpotById(spotId);
-        if (!spot) return;
-
-        // Cycle through statuses: available -> occupied -> maintenance -> available
-        switch (spot.status) {
-            case 'available':
-                spot.status = 'occupied';
-                spot.car = {
-                    plate: generateRandomPlate(),
-                    checkin: new Date()
-                };
-                break;
-            case 'occupied':
-                spot.status = 'maintenance';
-                spot.car = null;
-                break;
-            case 'maintenance':
-                spot.status = 'available';
-                spot.car = null;
-                break;
-        }
-
-        // Close modal and refresh display
-        const modal = bootstrap.Modal.getInstance(document.getElementById('spotModal'));
-        modal.hide();
-        
-        renderParkingBuilding();
-        updateStats();
-    }
-
-    // Initialize when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeParkingBuilding();
-        renderParkingBuilding();
-    });
-    </script>
-}
+<!-- Check In Modal -->
+<div class="modal fade" id="checkInModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Check In Car</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="availableCarsList" class="list-group">
+                    <!-- Available cars will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -12,11 +12,10 @@ namespace DemoAppDotNet.Models
 
         [Required]
         public int Number { get; set; }
-
         public int BuildingId { get; set; }
         
-        public virtual Building? Building { get; set; }
-
+        [NotMapped]
+        public Building Building { get; set; } 
         public virtual ICollection<Bay> Bays { get; set; } = new List<Bay>();
         public virtual ICollection<Car> Cars { get; set; } = new List<Car>();
         

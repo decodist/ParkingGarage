@@ -1,5 +1,6 @@
 using DemoAppDotNet.Classes;
 using DemoAppDotNet.Models;
+using DemoAppDotNet.Services;
 using Microsoft.EntityFrameworkCore;
 
 DotNetEnv.Env.Load();
@@ -9,6 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddControllers(); // API support
+
+// Add app-specific services
+builder.Services.AddScoped<BuildingService>();
+builder.Services.AddScoped<FloorService>();
+builder.Services.AddScoped<SpotService>();
+builder.Services.AddScoped<BayService>();
+builder.Services.AddScoped<CarService>();
 
 // Configure Kestrel to listen on HTTP only
 builder.WebHost.ConfigureKestrel(options =>
@@ -25,7 +33,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         "Production" => $"Server=tcp:demo-app-dot-net-database-server.database.windows.net,1433;Initial Catalog=demo-app-dot-net-database;Persist Security Info=False;User ID={Environment.GetEnvironmentVariable("PROD_DB_USER")};Password={Environment.GetEnvironmentVariable("PROD_DB_PASSWORD")};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
         _ => $"Server=localhost,1433;Database=DemoAppDb;User Id=sa;Password={Environment.GetEnvironmentVariable("SA_PASSWORD")};TrustServerCertificate=true;",
     };
-    Console.WriteLine(connectionString);
+    
     options.UseSqlServer(connectionString);
 });
 
@@ -34,14 +42,28 @@ builder.Services.AddControllersWithViews();
 var app = builder.Build();
 
 // Auto-create database and seed data
-using (var scope = app.Services.CreateScope())
+static async Task SeedDatabaseAsync(IServiceProvider services)
 {
+    using var scope = services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await context.Database.EnsureCreatedAsync();
-    
-    // Seed initial data if tables are empty
-    if (!await context.Set<Building>().AnyAsync())
+
+    // Check if database is properly seeded by verifying core data exists
+    var isSeeded = await context.Set<Building>().AnyAsync() &&
+                   await context.Set<Floor>().AnyAsync() &&
+                   await context.Set<Spot>().AnyAsync();
+
+    if (!isSeeded)
     {
+        // Clear any partial data first
+        context.Set<Car>().RemoveRange(context.Set<Car>());
+        context.Set<Rate>().RemoveRange(context.Set<Rate>());
+        context.Set<Spot>().RemoveRange(context.Set<Spot>());
+        context.Set<Bay>().RemoveRange(context.Set<Bay>());
+        context.Set<Floor>().RemoveRange(context.Set<Floor>());
+        context.Set<Building>().RemoveRange(context.Set<Building>());
+        await context.SaveChangesAsync();
+
         // Create main building
         var building = new Building
         {
@@ -63,6 +85,7 @@ using (var scope = app.Services.CreateScope())
             };
             await context.AddAsync(floor);
         }
+
         await context.SaveChangesAsync();
 
         // Create 3 bays per floor
@@ -76,11 +99,13 @@ using (var scope = app.Services.CreateScope())
                 {
                     Name = $"Bay {bayNames[bayIndex]}",
                     FloorId = floor.Id,
+                    BuildingId = floor.BuildingId,
                     Meta = $"{{\"section\":\"{bayNames[bayIndex]}\",\"capacity\":10}}"
                 };
                 await context.AddAsync(bay);
             }
         }
+
         await context.SaveChangesAsync();
 
         // Create 10 spots per bay
@@ -91,49 +116,59 @@ using (var scope = app.Services.CreateScope())
             {
                 var floor = floors.First(f => f.Id == bay.FloorId);
                 var bayLetter = bay.Name.Split(' ')[1];
-                var spotNumber = $"{floor.Number}{bayLetter}{spotNum:D2}";
-                
+                var spotName = $"{floor.Number}{bayLetter}{spotNum:D2}";
+
                 var spot = new Spot
                 {
-                    Number = spotNumber,
+                    Number = spotNum,
+                    Name = spotName,
                     Status = "Available",
                     FloorId = bay.FloorId,
                     BayId = bay.Id,
-                    Meta = $"{{\"type\":\"standard\",\"size\":\"compact\",\"ev_charging\":false}}"
+                    BuildingId = bay.BuildingId,
+                    Meta =
+                        $"{{\"type\":\"{new[] { "standard", "premium", "accessible" }[new Random().Next(3)]}\",\"size\":\"{new[] { "compact", "standard", "large" }[new Random().Next(3)]}\",\"ev_charging\":{(new Random().Next(2) == 1).ToString().ToLower()}}}"
                 };
                 await context.AddAsync(spot);
             }
         }
+
         await context.SaveChangesAsync();
 
-        // Create sample rates for spots
+        // Create some prices
         var spots = await context.Set<Spot>().Take(30).ToListAsync();
         foreach (var spot in spots)
         {
-            var rates = new[]
+            var rate = new Rate
             {
-                new Rate { Day = "Monday-Friday", StartTime = TimeSpan.FromHours(8), EndTime = TimeSpan.FromHours(18), MinuteRate = 0.25m, PremiumEv = 0.10m, SpotId = spot.Id },
-                new Rate { Day = "Monday-Friday", StartTime = TimeSpan.FromHours(18), EndTime = TimeSpan.FromHours(8), MinuteRate = 0.15m, PremiumEv = 0.05m, SpotId = spot.Id },
-                new Rate { Day = "Weekend", StartTime = TimeSpan.FromHours(0), EndTime = new TimeSpan(23, 59, 0), MinuteRate = 0.20m, PremiumEv = 0.08m, SpotId = spot.Id }
+                Day = "All",
+                MinuteRate = (decimal)(2.0 / 60.0), // $2 per hour
+                PremiumEv = 0.2m,
+                SpotId = spot.Id
             };
-            context.Set<Rate>().AddRange(rates);
+            context.Set<Rate>().Add(rate);
         }
 
-        // Add some sample cars
+        // Add some cars
         var randomSpots = await context.Set<Spot>().OrderBy(x => Guid.NewGuid()).Take(45).ToListAsync();
         var samplePlates = new[] { "ABC-1234", "XYZ-5678", "DEF-9012", "GHI-3456", "JKL-7890" };
-        
+
         for (int i = 0; i < randomSpots.Count; i++)
         {
             var spot = randomSpots[i];
-            spot.Status = "Occupied";
-            
+            var shouldPark = i < randomSpots.Count * 0.7; // Park 70% of cars
+
+            if (shouldPark)
+            {
+                spot.Status = "Occupied";
+            }
+
             var car = new Car
             {
                 Plate = $"{samplePlates[i % samplePlates.Length].Split('-')[0]}-{1000 + i}",
-                CheckIn = DateTime.UtcNow.AddHours(-new Random().Next(1, 8)),
+                CheckIn = shouldPark ? DateTime.UtcNow.AddHours(-new Random().Next(1, 8)) : DateTime.MinValue,
                 Size = new[] { "Compact", "Standard", "Large" }[i % 3],
-                SpotId = spot.Id,
+                SpotId = shouldPark ? spot.Id : null,
                 Meta = "{\"color\":\"blue\",\"model\":\"sedan\"}"
             };
             await context.AddAsync(car);
@@ -155,5 +190,7 @@ app.UseAuthorization();
 
 app.MapRazorPages();
 app.MapControllers(); // API controllers
+
+await SeedDatabaseAsync(app.Services);
 
 app.Run();

@@ -8,3 +8,5 @@ launchSettings.json
 Folder.DotSettings.user
 .env
 *.env
+docker-compose.override.yml
+dev.Dockerfile

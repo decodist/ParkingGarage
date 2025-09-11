@@ -18,7 +18,7 @@ namespace DemoAppDotNet.Tests
             return new ApplicationDbContext(options);
         }
 
-        [Fact(Skip = "Temporarily disabled")]
+        [Fact]
         public async Task DatabaseTables_AllParkingTablesExist_ReturnsSuccess()
         {
             // Arrange
@@ -34,7 +34,7 @@ namespace DemoAppDotNet.Tests
             Assert.False(buildingExists);
         }
 
-        [Fact(Skip = "Temporarily disabled")]
+        [Fact]
         public async Task SeedData_CreatesParkingStructure_ReturnsCorrectCounts()
         {
             // Arrange
@@ -82,11 +82,12 @@ namespace DemoAppDotNet.Tests
                 for (int spotNum = 1; spotNum <= 10; spotNum++)
                 {
                     var floor = floors.First(f => f.Id == bay.FloorId);
-                    var spotNumber = $"{floor.Number}{(char)('A' + (bays.IndexOf(bay) % 3))}{spotNum:D2}";
+                    var spotName = $"{floor.Number}{(char)('A' + (bays.IndexOf(bay) % 3))}{spotNum:D2}";
                     
                     var spot = new Spot
                     {
-                        Number = spotNumber,
+                        Number = spotNum,
+                        Name = spotName,
                         Status = "Available",
                         FloorId = bay.FloorId,
                         BayId = bay.Id,
@@ -131,7 +132,7 @@ namespace DemoAppDotNet.Tests
             Assert.Equal(1, await context.Set<Car>().CountAsync());
         }
 
-        [Fact(Skip = "Temporarily disabled")]
+        [Fact]
         public async Task Relationships_ForeignKeysWork_ReturnsValidData()
         {
             // Arrange
@@ -153,7 +154,8 @@ namespace DemoAppDotNet.Tests
 
             var spot = new Spot
             {
-                Number = "1A01",
+                Number = 1, 
+                Name = "1A01",
                 Status = "Available",
                 FloorId = floor.Id,
                 BayId = bay.Id,

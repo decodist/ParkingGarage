@@ -25,14 +25,14 @@ namespace DemoAppDotNet.Classes
                 .HasOne(b => b.Floor)
                 .WithMany(f => f.Bays) 
                 .HasForeignKey(b => b.FloorId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade); // Cascade delete bays when floor is deleted
         
             // Spot -> Bay
             modelBuilder.Entity<Spot>()
                 .HasOne(s => s.Bay)
                 .WithMany(s => s.Spots)
                 .HasForeignKey(s => s.BayId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade); // Cascade delete spots when bay is deleted
         
             // Spot -> Floor
             modelBuilder.Entity<Spot>()
@@ -46,8 +46,8 @@ namespace DemoAppDotNet.Classes
                 .HasOne(c => c.Spot)
                 .WithMany(s => s.Cars)
                 .HasForeignKey(c => c.SpotId)
-                .OnDelete(DeleteBehavior.NoAction);
-        
+                .OnDelete(DeleteBehavior.Cascade); // Cascade delete cars when spot is deleted
+         
             base.OnModelCreating(modelBuilder);
         }
         
@@ -59,7 +59,7 @@ namespace DemoAppDotNet.Classes
         public DbSet<Rate> Rates { get; set; }
         
         // Get Methods
-        public async Task<TEntity?> GetByIdAsync<TEntity>(int id) where TEntity : class
+        private async Task<TEntity?> GetByIdAsync<TEntity>(int id) where TEntity : class
         {
             return await Set<TEntity>().FindAsync(id);
         }
