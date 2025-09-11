@@ -11,19 +11,26 @@ namespace DemoAppDotNet.Models
         public int Id { get; set; }
 
         [Required]
-        [StringLength(20)]
-        public string Number { get; set; } = string.Empty;
+        public int Number { get; set; }
+        
+        [StringLength(50)]
+        public string? Name { get; set; }
 
         [Required]
         [StringLength(50)]
         public string Status { get; set; } = "Available";
-
+        
         public int FloorId { get; set; }
         public virtual Floor Floor { get; set; } = null!;
 
         public int BayId { get; set; }
         public virtual Bay Bay { get; set; } = null!;
-
+        
+        public int BuildingId { get; set; }
+        
+        [NotMapped]
+        public decimal MinuteRate { get; set; }
+        
         [StringLength(2000)]
         public string? Meta { get; set; }
 

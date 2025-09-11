@@ -22,8 +22,8 @@ namespace DemoAppDotNet.Models
         [StringLength(50)]
         public string? Size { get; set; }
 
-        public int SpotId { get; set; }
-        public virtual Spot Spot { get; set; } = null!;
+        public int? SpotId { get; set; }
+        public virtual Spot? Spot { get; set; } = null!;
         
         [StringLength(1000)]
         public string? Meta { get; set; }
