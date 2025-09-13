@@ -321,7 +321,7 @@ namespace DemoAppDotNet.Controllers
             try
             {
                 string plate = jsonElement.GetProperty("plate").GetString();
-                int spotId = int.Parse(jsonElement.GetProperty("spotId").GetString());
+                int spotId = jsonElement.GetProperty("spotId").GetInt32();
         
                 var car = await _carService.GetCarByPlateAsync(plate);
                 if (car == null)

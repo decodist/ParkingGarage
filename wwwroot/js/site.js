@@ -445,9 +445,9 @@ function showSpotDetails(spotId) {
     let bodyContent = "";
     if (spot.status.toLowerCase() === 'occupied' && spot.car) {
         // Convert check-in to local time
-        const checkinLocal = new Date(spot.car.checkin);
+        const checkinLocal = new Date(spot.car.checkin + 'Z');
         // Get current local time
-        const nowLocal = new Date();
+        const nowLocal = new Date(Date.now());
         // Calculate duration in minutes
         const duration = Math.floor(Math.abs(nowLocal.getTime() - checkinLocal.getTime()) / (1000 * 60));
         // Calculate the cost
@@ -458,7 +458,7 @@ function showSpotDetails(spotId) {
                         <strong>Vehicle:</strong> ${spot.car.plate}
                     </div>
                     <div class="mb-3">
-                        <strong>Checked In:</strong> ${spot.car.checkin.toLocaleString()}
+                        <strong>Checked In:</strong> ${checkinLocal.toLocaleString()}
                     </div>
                     <div class="mb-3">
                         <strong>Rate:</strong> $${spot.minuteRate.toFixed(2)} per minute ($${cost.toFixed(2)} so far)
@@ -667,7 +667,7 @@ async function fetchAndMatchCarData() {
                         model: car.model,
                         color: car.color,
                         size: car.size,
-                        checkin: new Date(car.checkIn)
+                        checkin: car.checkIn
                     };
                     spot.status = 'occupied';
                 }
